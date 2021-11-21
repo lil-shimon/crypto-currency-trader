@@ -30,6 +30,22 @@ type Ticker struct {
 	VolumeByProduct float64 `json:"volume_by_product"`
 }
 
+// Order / 新規注文の構造体
+type Order struct {
+	ProductCode    string  `json:"product_code"`
+	ChildOrderType string  `json:"child_order_type"`
+	Side           string  `json:"side"`
+	Price          float64 `json:"price"`
+	Size           float64 `json:"size"`
+	MinuteToExpire int     `json:"minute_to_expire"`
+	TimeInForce    string  `json:"time_in_force"`
+}
+
+// OrderRes / 新規注文のレスポンス構造体
+type OrderRes struct {
+	ChildOrderAcceptanceId string `json:"child_order_acceptance_id"`
+}
+
 func GetTicker(code ProductCode) (*Ticker, error) {
 
 	/// URL定義
