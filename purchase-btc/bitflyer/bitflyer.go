@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"purchase-btc/utils"
 	"strconv"
 	"time"
@@ -88,4 +89,43 @@ func getHeader(method, path, apiKey, apiSecret string, body []byte) map[string]s
 		"ACCESS-SIGN":      sign,
 		"Content-Type":     "application/json",
 	}
+}
+
+// PlaceOrder / 新規注文を出す関数
+func PlaceOrder(order *Order, apiKey, apiSecret string) (*OrderRes, error) {
+
+	method := "POST"
+
+	/// API URLを定義
+	path := "/v1/me/sendchildorder"
+	url := URL + path
+
+	/// POSTするデータを定義
+	data, err := json.Marshal(order)
+	if err != nil {
+		return nil, err
+	}
+
+	/// HEADERを取得
+	header := getHeader(method, path, apiKey, apiSecret, data)
+
+	/// HTTP REQUEST
+	res, err := utils.CreateHttpRequest(method, url, header, map[string]string{}, data)
+	if err != nil {
+		return nil, err
+	}
+
+	/// responseをorderResに格納
+	var orderRes OrderRes
+	err = json.Unmarshal(res, &orderRes)
+	if err != nil {
+		return nil, err
+	}
+
+	/// orderResの中身を正しく取得できているかを確認
+	if len(orderRes.ChildOrderAcceptanceId) == 0 {
+		return nil, errors.New(string(res))
+	}
+
+	return &orderRes, nil
 }
