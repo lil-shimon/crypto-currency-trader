@@ -1,4 +1,4 @@
-package bitflyer
+package order
 
 // ProductCode / 通貨ペア定義
 type ProductCode int

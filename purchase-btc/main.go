@@ -7,32 +7,54 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"math"
+	"purchase-btc/order"
 )
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	/// Tickerを取得
+	t, err := order.GetTicker(order.BTCJpy)
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			Body:       "Bad Request",
+			StatusCode: 400,
+		}, nil
+	}
 
-	/// APIKEYを取得
-	//apiKey, err := getParameter("purchase_btc-api-key")
-	//if err != nil {
-	//	return getErrorResponse(err.Error()), err
-	//}
+	/// APIKEYをSystem Managerから取得
+	apiKey, err := getParameter("purchase_btc-api-key")
+	if err != nil {
+		return getErrorResponse(err.Error()), err
+	}
 
-	/// API SECRETを取得
+	/// API SECRETをSystem Managerから取得
 	apiSecret, err := getParameter("purchase_btc-api-secret")
 	if err != nil {
 		return getErrorResponse(err.Error()), err
 	}
-	//
-	//t, err := bitflyer.GetTicker(bitflyer.BTCJpy)
-	//if err != nil {
-	//	return events.APIGatewayProxyResponse{
-	//		Body:       "Bad Request",
-	//		StatusCode: 400,
-	//	}, nil
-	//}
+
+	/// 現在価格の95％を買価格定義
+	bp := RoundDecimal(t.Ltp * 0.95)
+
+	/// 注文条件を指定
+	o := order.Order{
+		ProductCode:    order.BTCJpy.String(),
+		ChildOrderType: order.Limit.String(),
+		Side:           order.Buy.String(),
+		Price:          bp,
+		Size:           0.001,
+		MinuteToExpire: 4320, /// 3days
+		TimeInForce:    order.Gtc.String(),
+	}
+
+	/// 買い注文を入れる
+	oRes, err := order.PlaceOrder(&o, apiKey, apiSecret)
+	if err != nil {
+		return getErrorResponse(err.Error()), err
+	}
 
 	return events.APIGatewayProxyResponse{
-		Body:       fmt.Sprintf("API Secret >>> %+v", apiSecret),
+		Body:       fmt.Sprintf("res >>> %+v", oRes),
 		StatusCode: 200,
 	}, nil
 }
@@ -66,12 +88,14 @@ func getParameter(key string) (string, error) {
 }
 
 func getErrorResponse(msg string) events.APIGatewayProxyResponse {
-
 	return events.APIGatewayProxyResponse{
 		Body:       msg,
 		StatusCode: 400,
 	}
+}
 
+func RoundDecimal(num float64) float64 {
+	return math.Round(num)
 }
 
 func main() {
