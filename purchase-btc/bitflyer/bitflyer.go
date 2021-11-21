@@ -1,8 +1,13 @@
 package bitflyer
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"purchase-btc/utils"
+	"strconv"
+	"time"
 )
 
 const URL = "https://api.bitflyer.com"
@@ -46,4 +51,25 @@ func GetTicker(code ProductCode) (*Ticker, error) {
 	}
 
 	return &t, nil
+}
+
+func getHeader(method, path, apiKey, apiSecret string, body []byte) map[string]string {
+
+	/// UNIXのタイプスタンプを取得
+	ts := strconv.FormatInt(time.Now().Unix(), 10)
+
+	/// Signatureを作成
+	/// Signature = ACCESS-TIMESTAMP, HTTP method, request path, request bodyを文字列で連結したもの
+	/// をAPI SECRETでHMAC=SHA256署名
+	text := ts + method + path + string(body)
+	mac := hmac.New(sha256.New, []byte(apiSecret))
+	mac.Write([]byte(text))
+	sign := hex.EncodeToString(mac.Sum(nil))
+
+	return map[string]string{
+		"ACCESS-KEY":       apiKey,
+		"ACCESS-TIMESTAMP": ts,
+		"ACCESS-SIGN":      sign,
+		"Content-Type":     "application/json",
+	}
 }
