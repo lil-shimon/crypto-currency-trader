@@ -14,6 +14,18 @@ import (
 const URL = "https://api.bitflyer.com"
 const productCodeKey = "product_code"
 
+// APIClient / APIClientの構造体
+type APIClient struct {
+	apiKey    string
+	apiSecret string
+}
+
+// NewAPIClient / APIClientのコンストラクター
+/// 引数が多いと可読性が下がるので回避する
+func NewAPIClient(apiKey, apiSecret string) *APIClient {
+	return &APIClient{apiKey, apiSecret}
+}
+
 // Ticker / Tickerを格納する構造体
 type Ticker struct {
 	ProductCode     string  `json:"product-code"`
@@ -42,8 +54,8 @@ type Order struct {
 	TimeInForce    string  `json:"time_in_force"`
 }
 
-// OrderRes / 新規注文のレスポンス構造体
-type OrderRes struct {
+// Res OrderRes / 新規注文のレスポンス構造体
+type Res struct {
 	ChildOrderAcceptanceId string `json:"child_order_acceptance_id"`
 }
 
@@ -70,7 +82,7 @@ func GetTicker(code ProductCode) (*Ticker, error) {
 	return &t, nil
 }
 
-func getHeader(method, path, apiKey, apiSecret string, body []byte) map[string]string {
+func (client *APIClient) getHeader(method, path string, body []byte) map[string]string {
 
 	/// UNIXのタイプスタンプを取得
 	ts := strconv.FormatInt(time.Now().Unix(), 10)
@@ -79,12 +91,12 @@ func getHeader(method, path, apiKey, apiSecret string, body []byte) map[string]s
 	/// Signature = ACCESS-TIMESTAMP, HTTP method, request path, request bodyを文字列で連結したもの
 	/// をAPI SECRETでHMAC=SHA256署名
 	text := ts + method + path + string(body)
-	mac := hmac.New(sha256.New, []byte(apiSecret))
+	mac := hmac.New(sha256.New, []byte(client.apiSecret))
 	mac.Write([]byte(text))
 	sign := hex.EncodeToString(mac.Sum(nil))
 
 	return map[string]string{
-		"ACCESS-KEY":       apiKey,
+		"ACCESS-KEY":       client.apiKey,
 		"ACCESS-TIMESTAMP": ts,
 		"ACCESS-SIGN":      sign,
 		"Content-Type":     "application/json",
@@ -92,7 +104,7 @@ func getHeader(method, path, apiKey, apiSecret string, body []byte) map[string]s
 }
 
 // PlaceOrder / 新規注文を出す関数
-func PlaceOrder(order *Order, apiKey, apiSecret string) (*OrderRes, error) {
+func (client *APIClient) PlaceOrder(order *Order) (*Res, error) {
 
 	method := "POST"
 
@@ -107,7 +119,7 @@ func PlaceOrder(order *Order, apiKey, apiSecret string) (*OrderRes, error) {
 	}
 
 	/// HEADERを取得
-	header := getHeader(method, path, apiKey, apiSecret, data)
+	header := client.getHeader(method, path, data)
 
 	/// HTTP REQUEST
 	res, err := utils.CreateHttpRequest(method, url, header, map[string]string{}, data)
@@ -116,7 +128,7 @@ func PlaceOrder(order *Order, apiKey, apiSecret string) (*OrderRes, error) {
 	}
 
 	/// responseをorderResに格納
-	var orderRes OrderRes
+	var orderRes Res
 	err = json.Unmarshal(res, &orderRes)
 	if err != nil {
 		return nil, err
