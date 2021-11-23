@@ -47,8 +47,10 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		TimeInForce:    order.Gtc.String(),
 	}
 
+	client := order.NewAPIClient(apiKey, apiSecret)
+
 	/// 買い注文を入れる
-	oRes, err := order.PlaceOrder(&o, apiKey, apiSecret)
+	oRes, err := client.PlaceOrder(&o)
 	if err != nil {
 		return getErrorResponse(err.Error()), err
 	}
