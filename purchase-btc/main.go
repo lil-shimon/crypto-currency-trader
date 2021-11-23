@@ -12,13 +12,27 @@ import (
 )
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+
+	/// Tickerのchannel定義 [order.Ticker]
+	tickerChan := make(chan *order.Ticker)
+
+	/// errorのchannel
+	errChan := make(chan error)
+
+	/// channel閉じる
+	defer close(tickerChan)
+	defer close(errChan)
+
 	/// Tickerを取得
-	t, err := order.GetTicker(order.BTCJpy)
+	/// 非同期 go routine
+	go order.GetTicker(tickerChan, errChan, order.BTCJpy)
+
+	/// 各channelから値を受信
+	t := <-tickerChan
+	err := <-errChan
+
 	if err != nil {
-		return events.APIGatewayProxyResponse{
-			Body:       "Bad Request",
-			StatusCode: 400,
-		}, nil
+		return getErrorResponse(err.Error()), nil
 	}
 
 	/// APIKEYをSystem Managerから取得

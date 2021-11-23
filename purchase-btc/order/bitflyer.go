@@ -59,7 +59,7 @@ type Res struct {
 	ChildOrderAcceptanceId string `json:"child_order_acceptance_id"`
 }
 
-func GetTicker(code ProductCode) (*Ticker, error) {
+func GetTicker(ch chan *Ticker, errCh chan error, code ProductCode) {
 
 	/// URL定義
 	url := URL + "/v1/ticker"
@@ -67,7 +67,9 @@ func GetTicker(code ProductCode) (*Ticker, error) {
 	/// request
 	res, err := utils.CreateHttpRequest("GET", url, nil, map[string]string{productCodeKey: code.String()}, nil)
 	if err != nil {
-		return nil, err
+		ch <- nil
+		errCh <- err
+		return
 	}
 
 	/// Ticker
@@ -76,10 +78,14 @@ func GetTicker(code ProductCode) (*Ticker, error) {
 	/// レスポンスをTickerに変換する
 	err = json.Unmarshal(res, &t)
 	if err != nil {
-		return nil, err
+		ch <- nil
+		errCh <- err
+		return
 	}
 
-	return &t, nil
+	/// 返す順番間違えるとブロックされるので注意....
+	ch <- &t
+	errCh <- nil
 }
 
 func (client *APIClient) getHeader(method, path string, body []byte) map[string]string {
