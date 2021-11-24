@@ -110,10 +110,6 @@ func getErrorResponse(msg string) events.APIGatewayProxyResponse {
 	}
 }
 
-func RoundDecimal(num float64) float64 {
-	return math.Round(num)
-}
-
 func main() {
 	lambda.Start(handler)
 }
