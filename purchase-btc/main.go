@@ -7,7 +7,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"math"
 	"purchase-btc/order"
 )
 
@@ -47,27 +46,18 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return getErrorResponse(err.Error()), err
 	}
 
-	/// 現在価格の95％を買価格定義
-	bp := RoundDecimal(t.Ltp * 0.95)
-
-	/// 注文条件を指定
-	o := order.Order{
-		ProductCode:    order.BTCJpy.String(),
-		ChildOrderType: order.Limit.String(),
-		Side:           order.Buy.String(),
-		Price:          bp,
-		Size:           0.001,
-		MinuteToExpire: 4320, /// 3days
-		TimeInForce:    order.Gtc.String(),
-	}
-
+	/// クライアントを生成
 	client := order.NewAPIClient(apiKey, apiSecret)
 
-	/// 買い注文を入れる
-	oRes, err := client.PlaceOrder(&o)
-	if err != nil {
-		return getErrorResponse(err.Error()), err
-	}
+	/// budget定義
+	budget := 10000.0
+
+	/// PriceとSizeを取得 (1 = LTP * 0.985の関数を取得)
+	/// カリー化
+	p, s := order.GetByLogic(1)(budget, t)
+
+	/// 注文
+	oRes, err := order.PlaceOrderWithParams(client, p, s)
 
 	return events.APIGatewayProxyResponse{
 		Body:       fmt.Sprintf("res >>> %+v", oRes),
