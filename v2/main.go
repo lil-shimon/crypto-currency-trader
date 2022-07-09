@@ -59,7 +59,9 @@ func fetchChartByCt(ct string) (*Res, error) {
 		return nil, err
 	}
 
-	writeToCsv([][]string{[]string{r.Rate, r.Price, r.Amount}})
+	record := readFromCsv()
+	record = append(record, []string{r.Amount, r.Price, r.Rate})
+	writeToCsv(record)
 
 	return &r, nil
 }
@@ -76,6 +78,21 @@ func writeToCsv(data [][]string) {
 	if err := w.Error(); err != nil {
 		log.Fatalln("error writing csv:", err)
 	}
+}
+
+func readFromCsv() [][]string {
+	file, err := os.ReadFile("chart.csv")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	r := csv.NewReader(bytes.NewReader(file))
+	record, err := r.ReadAll()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return record
 }
 
 func CreateHttpRequest(method, url string, header, query map[string]string, data []byte) ([]byte, error) {
