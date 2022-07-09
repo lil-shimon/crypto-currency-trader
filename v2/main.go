@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 const ApiUrl = "https://coincheck.com"
@@ -44,26 +45,31 @@ func (ct CurrencyType) String() string {
 	}
 }
 
-func fetchChartByCt(ct string) (*Res, error) {
+/// save chart data to csv
+func fetchChartByCt(ct string) {
 	url := ApiUrl + "/api/exchange/orders/rate"
 
 	res, err := CreateHttpRequest("GET", url, nil, map[string]string{"pair": ct, "order_type": "buy", "amount": "1"}, nil)
 
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	var r Res
 	err = json.Unmarshal(res, &r)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
+	var now = time.Now()
 	record := readFromCsv()
-	record = append(record, []string{r.Amount, r.Price, r.Rate})
+	record = append(record, []string{r.Amount, r.Price, r.Rate, timeToStr(now)})
 	writeToCsv(record)
+	print(r.Amount, r.Price, r.Rate, timeToStr(now), "\n")
+}
 
-	return &r, nil
+func timeToStr(t time.Time) string {
+	return t.Format("2006-01-02 15:04:05")
 }
 
 func writeToCsv(data [][]string) {
@@ -149,11 +155,7 @@ func CreateHttpRequest(method, url string, header, query map[string]string, data
 }
 
 func main() {
-	r, err := fetchChartByCt(Btc.String())
-	if err != nil {
-		print("failed to get chart data", err)
+	for range time.Tick(time.Second * 1) {
+		fetchChartByCt(Btc.String())
 	}
-	print(r.Amount)
-	print(r.Price)
-	print(r.Rate)
 }
