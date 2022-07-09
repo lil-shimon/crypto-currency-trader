@@ -2,11 +2,14 @@ package main
 
 import (
 	"bytes"
+	csv "encoding/csv"
 	"encoding/json"
 	"errors"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
 )
 
 const ApiUrl = "https://coincheck.com"
@@ -56,7 +59,23 @@ func fetchChartByCt(ct string) (*Res, error) {
 		return nil, err
 	}
 
+	writeToCsv([][]string{[]string{r.Rate, r.Price, r.Amount}})
+
 	return &r, nil
+}
+
+func writeToCsv(data [][]string) {
+	file, err := os.Create("chart.csv")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	w := csv.NewWriter(file)
+	w.WriteAll(data)
+
+	if err := w.Error(); err != nil {
+		log.Fatalln("error writing csv:", err)
+	}
 }
 
 func CreateHttpRequest(method, url string, header, query map[string]string, data []byte) ([]byte, error) {
