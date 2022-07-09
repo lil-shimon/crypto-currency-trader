@@ -14,9 +14,9 @@ const ApiUrl = "https://coincheck.com"
 type CurrencyType int
 
 type Res struct {
-	Rate   int `json:"rate"`
-	Price  int `json:"price"`
-	Amount int `json:"amount"`
+	Rate   string `json:"rate"`
+	Price  string `json:"price"`
+	Amount string `json:"amount"`
 }
 
 const (
@@ -44,7 +44,7 @@ func (ct CurrencyType) String() string {
 func fetchChartByCt(ct string) (*Res, error) {
 	url := ApiUrl + "/api/exchange/orders/rate"
 
-	res, err := CreateHttpRequest("GET", url, nil, map[string]string{"pair": ct, "order_type": "buy"}, nil)
+	res, err := CreateHttpRequest("GET", url, nil, map[string]string{"pair": ct, "order_type": "buy", "amount": "1"}, nil)
 
 	if err != nil {
 		return nil, err
@@ -115,9 +115,9 @@ func CreateHttpRequest(method, url string, header, query map[string]string, data
 func main() {
 	r, err := fetchChartByCt(Btc.String())
 	if err != nil {
-		print("failed to get chart data")
+		print("failed to get chart data", err)
 	}
-	print(r.Rate)
-	print(r.Price)
 	print(r.Amount)
+	print(r.Price)
+	print(r.Rate)
 }
